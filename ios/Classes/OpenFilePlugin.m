@@ -12,25 +12,37 @@ static NSString *const CHANNEL_NAME = @"open_file";
     UIDocumentInteractionController *_interactionController;
 }
 
++ (UIViewController *)topViewController {
+  return [self topViewControllerFromViewController:[UIApplication sharedApplication]
+                                                       .keyWindow.rootViewController];
+}
+
++ (UIViewController *)topViewControllerFromViewController:(UIViewController *)viewController {
+  if ([viewController isKindOfClass:[UINavigationController class]]) {
+    UINavigationController *navigationController = (UINavigationController *)viewController;
+    return [self
+        topViewControllerFromViewController:[navigationController.viewControllers lastObject]];
+  }
+  if ([viewController isKindOfClass:[UITabBarController class]]) {
+    UITabBarController *tabController = (UITabBarController *)viewController;
+    return [self topViewControllerFromViewController:tabController.selectedViewController];
+  }
+  if (viewController.presentedViewController) {
+    return [self topViewControllerFromViewController:viewController.presentedViewController];
+  }
+  return viewController;
+}
+
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
     FlutterMethodChannel* channel = [FlutterMethodChannel
                                      methodChannelWithName:CHANNEL_NAME
                                      binaryMessenger:[registrar messenger]];
-    UIViewController *viewController =
-    [UIApplication sharedApplication].delegate.window.rootViewController;
-    OpenFilePlugin* instance = [[OpenFilePlugin alloc] initWithViewController:viewController];
+    OpenFilePlugin* instance = [OpenFilePlugin alloc];
     [registrar addMethodCallDelegate:instance channel:channel];
 }
 
-- (instancetype)initWithViewController:(UIViewController *)viewController {
-    self = [super init];
-    if (self) {
-        _viewController = viewController;
-    }
-    return self;
-}
-
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    _viewController = [OpenFilePlugin topViewController];
     if ([@"open_file" isEqualToString:call.method]) {
         _result = result;
         NSString *msg = call.arguments[@"file_path"];
